@@ -5,4 +5,5 @@
 	#RewriteRule ^(\.well-known/.*)$ $1 [L]
 	RewriteRule ^$ webroot/ [L]
 	RewriteRule (.*) webroot/$1 [L]
+	php_flag display_errors On
 </IfModule>

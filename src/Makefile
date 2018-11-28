@@ -4,3 +4,6 @@ core_app:
 
 clean:
 	-rm ../bin/core_app
+
+hough: 
+	gcc -o hough hough.c bitmapio.c
