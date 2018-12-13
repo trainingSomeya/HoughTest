@@ -6,7 +6,7 @@ clean:
 	-rm ../bin/core_app
 
 hough: 
-	gcc -g -o hough hough.c bitmapio.c png_out.c libpng.a -lz -lm
+	gcc -g -o hough hough.c bitmapio.c png_out.c libpng.a -lz -lm -O3
 
 clean_hough:
 	-rm hough
