@@ -6,8 +6,6 @@
 #include "png_out.h"
 #include "png.h"
 
-#include <time.h>
-
 #define BLACK 0
 #define WHITE 255
 #define THETA_MAX 1024 //πラジアンを分ける数
@@ -21,10 +19,14 @@
 double sn[THETA_MAX];
 //三角関数テーブル（コサイン）
 double cs[THETA_MAX];
+
+struct index{
+	int x;
+	int y;
+};
 struct blackMap{
 	int counter;
-	int *x;
-	int *y;
+	struct index *map;
 };
 
 
@@ -70,9 +72,8 @@ void Grayscale(Bmp *bmp){
 struct blackMap Binarization(Bmp *bmp){
 	struct blackMap black_map;
 	black_map.counter = 0;
-	black_map.x = malloc(sizeof(int)*bmp->height*bmp->width);
-	black_map.y = malloc(sizeof(int)*bmp->height*bmp->width);
-
+	black_map.map = malloc(sizeof(int)*bmp->height*bmp->width);
+	
 	int i,j;
 	unsigned long int index;
 	unsigned int index_h;
@@ -92,8 +93,8 @@ struct blackMap Binarization(Bmp *bmp){
 				bmp->map[index+1]= BLACK;
 				bmp->map[index+2]= BLACK;
 				//printf("index:%d,x:%d,y:%d\n",index,j,i);
-				black_map.x[black_map.counter] = j;
-				black_map.y[black_map.counter] = i;
+				black_map.map[black_map.counter].x = j;
+				black_map.map[black_map.counter].y = i;
 				//printf("x:%d, y:%d\n",black_map.map[black_map.counter].x,black_map.map[black_map.counter].y);
 				black_map.counter++;
 			}else{
@@ -103,7 +104,6 @@ struct blackMap Binarization(Bmp *bmp){
 			}
 		}
 	}
-
 	return black_map;
 }
 
@@ -111,77 +111,77 @@ struct blackMap Binarization(Bmp *bmp){
 //二値化、判別分析法
 //楽譜の横線が消えてしまい、うまくいっていない
 void discriminantAnalysis(Bmp *bmp){
-int i,j;
-int hist[255]={};
-unsigned int index;
-unsigned int color;
-uint32_t w_bytes = WIDTHBYTES(bmp->width * bmp->bit_count); 
+	int i,j;
+	int hist[255]={};
+	unsigned int index;
+	unsigned int color;
+	uint32_t w_bytes = WIDTHBYTES(bmp->width * bmp->bit_count); 
 
-for(i=0; i<bmp->height;i++){
-for(j=0;j<(bmp->width);j++){
-index = (bmp->height-i-1)*w_bytes + j*3;
-color = (bmp->map[index+0]+bmp->map[index+1]+bmp->map[index+2])/3;
+	for(i=0; i<bmp->height;i++){
+		for(j=0;j<(bmp->width);j++){
+			index = (bmp->height-i-1)*w_bytes + j*3;
+			color = (bmp->map[index+0]+bmp->map[index+1]+bmp->map[index+2])/3;
 
-hist[color]++;
-}
-}
+			hist[color]++;
+		}
+	}
 
-// 判別分析法 
-int t = 0;  // 閾値
-double max = 0.0;  // w1 * w2 * (m1 - m2)^2 の最大値
-int w1 = 0;  // クラス１の画素数
-int w2 = 0;  // クラス２の画素数
-double sum1 = 0;  // クラス１の平均を出すための合計値
-double sum2 = 0;  // クラス２の平均を出すための合計値
-double m1 = 0.0;  // クラス１の平均
-double m2 = 0.0;  // クラス２の平均
-double tmp;
+	// 判別分析法 
+	int t = 0;  // 閾値
+	double max = 0.0;  // w1 * w2 * (m1 - m2)^2 の最大値
+	int w1 = 0;  // クラス１の画素数
+	int w2 = 0;  // クラス２の画素数
+	double sum1 = 0;  // クラス１の平均を出すための合計値
+	double sum2 = 0;  // クラス２の平均を出すための合計値
+	double m1 = 0.0;  // クラス１の平均
+	double m2 = 0.0;  // クラス２の平均
+	double tmp;
 
-for (i = 0; i < 256; ++i){
+	for (i = 0; i < 256; ++i){
 
-for (j = 0; j <= i; ++j){
-w1 += hist[j];
-sum1 += j * hist[j];
-}
+		for (j = 0; j <= i; ++j){
+			w1 += hist[j];
+			sum1 += j * hist[j];
+		}
 
-for (j = i+1; j < 256; ++j){
-w2 += hist[j];
-sum2 += j * hist[j];
-}
+		for (j = i+1; j < 256; ++j){
+			w2 += hist[j];
+			sum2 += j * hist[j];
+		}
 
-if (w1){
-m1 = sum1 / w1;
-}
+		if (w1){
+			m1 = sum1 / w1;
+		}
 
-if (w2){
-m2 = sum2 / w2;
-}
+		if (w2){
+			m2 = sum2 / w2;
+		}
 
-tmp = w1 * w2 * (m1 - m2) * (m1 - m2);
+		tmp = w1 * w2 * (m1 - m2) * (m1 - m2);
 
-if (tmp > max){
-max = tmp;
-t = i;
-}
-}
+		if (tmp > max){
+			max = tmp;
+			t = i;
+		}
+	}
 
-// tの値を使って２値化 
-for(i=0; i<bmp->height;i++){
-for(j=0;j<(bmp->width);j++){
-index = (bmp->height-i-1)*w_bytes + j*3;
+	// tの値を使って２値化 
+	for(i=0; i<bmp->height;i++){
+		for(j=0;j<(bmp->width);j++){
+			index = (bmp->height-i-1)*w_bytes + j*3;
 
-color = (bmp->map[index+0]+bmp->map[index+1]+bmp->map[index+2])/3;
-if(color<t){
-bmp->map[index+0]= BLACK;
-bmp->map[index+1]= BLACK;
-bmp->map[index+2]= BLACK;
-}else{
-bmp->map[index+0]= WHITE;
-bmp->map[index+1]= WHITE;
-bmp->map[index+2]= WHITE;
-}
-}
-}
+			color = (bmp->map[index+0]+bmp->map[index+1]+bmp->map[index+2])/3;
+			if(color<t){
+				bmp->map[index+0]= BLACK;
+				bmp->map[index+1]= BLACK;
+				bmp->map[index+2]= BLACK;
+			}else{
+				bmp->map[index+0]= WHITE;
+				bmp->map[index+1]= WHITE;
+				bmp->map[index+2]= WHITE;
+			}
+		}
+	}
 }
 */
 
@@ -189,20 +189,20 @@ bmp->map[index+2]= WHITE;
 void Rotation(Bmp *bmp,int theta){
 	uint8_t *map ;
 	map = malloc(sizeof(uint8_t)*bmp->height*bmp->width*3);
-
+	
 	int i,j,index,index_x,index_y,rota_index_x,rota_index_y,rota_index;
 	uint32_t w_bytes = WIDTHBYTES(bmp->width * bmp->bit_count); 
 	memcpy(map,bmp->map,sizeof(uint8_t)*bmp->height*bmp->width*3);//第３引数がbmp->mapのサイズと同じとしている、不安なので後でもう一度考える
 	/*	
-		for(i=0; i<bmp->height;i++){
+	for(i=0; i<bmp->height;i++){
 		for(j=0;j<(bmp->width);j++){
-		index = (bmp->height-1-i)*w_bytes + j*3;
-		map[index]= bmp->map[index];
-		map[index+1]= bmp->map[index+1];
-		map[index+2]= bmp->map[index+2];
+			index = (bmp->height-1-i)*w_bytes + j*3;
+			map[index]= bmp->map[index];
+			map[index+1]= bmp->map[index+1];
+			map[index+2]= bmp->map[index+2];
 		}
-		}
-		*/
+	}
+*/
 	for(i=0;i<bmp->height;i++){
 		for(j=0;j<bmp->width;j++){
 			index_y = (bmp->height-1-i)-bmp->height/2;
@@ -239,7 +239,7 @@ void Rotation(Bmp *bmp,int theta){
 
 //ハフ変換、とりあえず楽譜の傾き補正だけを考える
 int Hough(Bmp *bmp, struct blackMap b_map){
-	int i,j,theta,rho,count_index;
+	int i,j,theta,rho;
 	unsigned int height, width; 
 	unsigned int index;
 	unsigned int color;
@@ -250,37 +250,27 @@ int Hough(Bmp *bmp, struct blackMap b_map){
 	int RHO_MAX = (int)sqrt(pow_height+pow_width);//垂線の長さのとりうる最大値,対角線の長さ
 	int delete_renge = RHO_MAX/40;
 	uint32_t w_bytes = WIDTHBYTES(bmp->width * bmp->bit_count); 
-
-	clock_t start,end;
+	//int RHO_MAX = bmp->height;//test
 
 	// ------ Hough変換
 	//直線検出用頻度カウンタ,負の部分が存在するので垂線の長さの最大値を２倍に取る
-	int (*counter)[2*RHO_MAX] ;
+	int *counter ;
 	//	counter = malloc(sizeof(int)*THETA_MAX*2*RHO_MAX);//画像によってはゴミが残っていることがある（要修正）
 	//	memset(counter, 0, sizeof(int)*THETA_MAX*2*RHO_MAX);
-	counter = calloc(THETA_MAX*(2*RHO_MAX),sizeof(int));
+	counter = (int*)calloc(THETA_MAX*2*RHO_MAX,sizeof(int));
 
 	printf("counter_size:%d,RHO_MAX:%d\n", sizeof(int)*THETA_MAX*2*RHO_MAX,RHO_MAX);
 
+	for(i=0;i<b_map.counter;i++){
+		width = b_map.map[i].x;
+		height = b_map.map[i].y;
+		//printf("w:%d,h:%d\n",width,height);
 
-	start = clock();
-
-	for(theta=0;theta<THETA_MAX;theta++){
-		for(i=0;i<b_map.counter;i++){
-			width = b_map.x[i];
-			height = b_map.y[i];
-			//printf("w:%d,h:%d\n",width,height);
-
-			////////////////////////////計算時間の問題点
-			rho= (int)(width*cs[theta]+height*sn[theta]+0.5);
-			///////////////////////////////////////
-			//	printf("rho:%d,theta:%d\n",rho,theta);
-			counter[theta][rho+RHO_MAX]++;
-			//printf("counter:%d,num:%d,rho:%d,theta:%d,index:%d,i:%d,j:%d\n",counter[theta][RHO_MAX+rho],2*RHO_MAX*theta+RHO_MAX+rho,rho,theta,index,i,j);
-		}
+				for(theta=0;theta<THETA_MAX;theta++){
+					rho= (int)(width*cs[theta]+height*sn[theta]+0.5);
+					counter[2*RHO_MAX*theta+RHO_MAX+rho]++;
+				}
 	}
-	end = clock();
-	printf("time:%.2f s\n",(double)(end-start)/CLOCKS_PER_SEC);
 
 	// ----Hough逆変換
 	int end_flag = 0;   //繰り返しを終了させるフラグ
@@ -297,8 +287,8 @@ int Hough(Bmp *bmp, struct blackMap b_map){
 		//counterが最大になるtheta_maxとrho_maxを求める
 		for(theta=0;theta<THETA_MAX;theta++){
 			for(rho=-RHO_MAX;rho<RHO_MAX;rho++){
-				if(counter[theta][RHO_MAX+rho]>counter_max){
-					counter_max=counter[theta][RHO_MAX+rho];
+				if(counter[2*RHO_MAX*theta+RHO_MAX+rho]>counter_max){
+					counter_max=counter[2*RHO_MAX*theta+RHO_MAX+rho];
 					//printf("counter_max=%d(theta=%d,rho=%d)\n",counter_max,theta,rho);
 					//楽譜なので画像幅の半分以下のピクセルの直線になれば検出を終了
 					if(counter_max<=bmp->width/2){
@@ -314,9 +304,9 @@ int Hough(Bmp *bmp, struct blackMap b_map){
 		if(end_flag){
 			break;
 		}
-		printf("theta_max=%d,rho_max=%d,max_counter=%d\n",theta_max,rho_max,counter_max);
-		
-		//検出した直線の描画(確認用)
+		printf("theta_max=%d,rho_max=%d\n",theta_max,rho_max);
+
+		//検出した直線の描画
 		//xを変化させてyを描く（垂直の線を除く）
 		if(theta_max!=0){
 			for(j=0;j<bmp->width;j++){
@@ -338,12 +328,11 @@ int Hough(Bmp *bmp, struct blackMap b_map){
 				if(j>=bmp->width || j<0) continue;
 				bmp->map[index+0]=0;
 				bmp->map[index+1]=0;
-				bmp->map[index+2]=255;		
-			}
+				bmp->map[index+2]=255;			}
 		}
-		
+
 		//近傍の直線を消す
-		for(j=-delete_renge;j<=delete_renge;j++){
+		for(j=-delete_renge;j<=delete_renge;j++)
 			for(i=-30;i<=30;i++){
 				if(theta_max+i<0){
 					theta_max+=THETA_MAX;
@@ -355,11 +344,11 @@ int Hough(Bmp *bmp, struct blackMap b_map){
 				}
 				if(rho_max+j<-RHO_MAX || rho_max+j>=RHO_MAX)
 					continue;
-				counter[theta_max+i][rho_max+RHO_MAX+j]=0;
+				counter[2*RHO_MAX*(theta_max+i)+rho_max+RHO_MAX+j]=0;
 			}
-		}
+
 		//4つずつに分けて各角度の検出頻度を記録
-		theta_index = (theta_max+THETA_MAX)/4;	
+		theta_index = (theta_max+1024)/4;	
 		turn_theta[theta_index].count++;
 		turn_theta[theta_index].theta += theta_max;
 
@@ -377,13 +366,6 @@ int Hough(Bmp *bmp, struct blackMap b_map){
 		}
 
 	}
-
-	//////////////////
-	free(b_map.x);
-	free(b_map.y);
-	//////////////////
-
-
 	free(counter);
 
 	return most_theta-THETA_MAX/2;
@@ -409,15 +391,15 @@ int main(int argc, char *argv[]){
 		exit(1);
 	}
 
-	//	discriminantAnalysis(&bmp);
+//	discriminantAnalysis(&bmp);
 
 	struct blackMap b_map;
 
 	b_map = Binarization(&bmp);
 	printf("blackcount:%d\n",b_map.counter);
 	theta = Hough(&bmp, b_map);
-	printf("theta:%d\n",theta);
-	Rotation(&bmp,theta);
+	//printf("theta:%d\n",theta);
+	//Rotation(&bmp,theta);
 	SaveBitmapAsPngFile("/vagrant/image/output.png",&bmp);
 	delete_bmp(&bmp);
 
