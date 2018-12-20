@@ -10,17 +10,19 @@
 
 #define BLACK 0
 #define WHITE 255
-#define THETA_MAX 1024 //πラジアンを分ける数
+//#define THETA_MAX 1024 //πラジアンを分ける数
+#define THETA_MAX 512 //πラジアンを分ける数
 #define PIK M_PI/THETA_MAX
+#define ROUND 1000 //三角関数の桁数の丸める桁数
 
 #ifndef WIDTHBYTES
 #define WIDTHBYTES(bits)    (((bits)+31)/32*4)
 #endif//WIDTHBYTES
 
 //三角関数テーブル（サイン）
-double sn[THETA_MAX];
+int sn[THETA_MAX];
 //三角関数テーブル（コサイン）
-double cs[THETA_MAX];
+int cs[THETA_MAX];
 struct blackMap{
 	int counter;
 	int *x;
@@ -38,8 +40,8 @@ void init(){
 	int i;
 	//三角関数テーブルを作成
 	for(i=0;i<THETA_MAX;i++){
-		sn[i]= sin(PIK*i);
-		cs[i]= cos(PIK*i);
+		sn[i]= sin(PIK*i)*ROUND;
+		cs[i]= cos(PIK*i)*ROUND;
 	}
 }
 
@@ -204,16 +206,16 @@ void Rotation(Bmp *bmp,int theta){
 		}
 		*/
 	for(i=0;i<bmp->height;i++){
+		index_y = (bmp->height-1-i)-bmp->height/2;
 		for(j=0;j<bmp->width;j++){
-			index_y = (bmp->height-1-i)-bmp->height/2;
 			index_x = j-bmp->width/2;
 			index = (bmp->height-1-i)*w_bytes + j*3;
 			if(theta>=0){
-				rota_index_x = (int)(cs[theta]*index_x + sn[theta]*index_y)+bmp->width/2;
-				rota_index_y = (int)(-sn[theta]*index_x + cs[theta]*index_y)+bmp->height/2;
+				rota_index_x = (int)(cs[theta]*index_x + sn[theta]*index_y)/ROUND+bmp->width/2;
+				rota_index_y = (int)(-sn[theta]*index_x + cs[theta]*index_y)/ROUND+bmp->height/2;
 			}else{
-				rota_index_x = (int)(cs[-theta]*index_x - sn[-theta]*index_y)+bmp->width/2;
-				rota_index_y = (int)(sn[-theta]*index_x + cs[-theta]*index_y)+bmp->height/2;	
+				rota_index_x = (int)(cs[-theta]*index_x - sn[-theta]*index_y)/ROUND+bmp->width/2;
+				rota_index_y = (int)(sn[-theta]*index_x + cs[-theta]*index_y)/ROUND+bmp->height/2;	
 			}
 			if(rota_index_x<0 || rota_index_x >= bmp->width || rota_index_y < 0 || rota_index_y >= bmp->height){
 				/*
@@ -240,7 +242,7 @@ void Rotation(Bmp *bmp,int theta){
 //ハフ変換、とりあえず楽譜の傾き補正だけを考える
 int Hough(Bmp *bmp, struct blackMap b_map){
 	int i,j,theta,rho,count_index;
-	unsigned int height, width; 
+	int height, width; 
 	unsigned int index;
 	unsigned int color;
 	struct turnTheta turn_theta[512] = {};//回転角を４つ分の範囲で分ける
@@ -264,16 +266,16 @@ int Hough(Bmp *bmp, struct blackMap b_map){
 
 
 	start = clock();
-
 	for(theta=0;theta<THETA_MAX;theta++){
 		for(i=0;i<b_map.counter;i++){
 			width = b_map.x[i];
 			height = b_map.y[i];
 			//printf("w:%d,h:%d\n",width,height);
 
-			////////////////////////////計算時間の問題点
-			rho= (int)(width*cs[theta]+height*sn[theta]+0.5);
+			///計算時間の問題点/////////////////////////
+			rho= (width*cs[theta]+height*sn[theta])/ROUND;//小数点切り捨て、問題がありそうなら再考
 			///////////////////////////////////////
+			
 			//	printf("rho:%d,theta:%d\n",rho,theta);
 			counter[theta][rho+RHO_MAX]++;
 			//printf("counter:%d,num:%d,rho:%d,theta:%d,index:%d,i:%d,j:%d\n",counter[theta][RHO_MAX+rho],2*RHO_MAX*theta+RHO_MAX+rho,rho,theta,index,i,j);
@@ -315,33 +317,33 @@ int Hough(Bmp *bmp, struct blackMap b_map){
 			break;
 		}
 		printf("theta_max=%d,rho_max=%d,max_counter=%d\n",theta_max,rho_max,counter_max);
-		
+		/*	
 		//検出した直線の描画(確認用)
 		//xを変化させてyを描く（垂直の線を除く）
 		if(theta_max!=0){
-			for(j=0;j<bmp->width;j++){
-				i=(int)((rho_max-j*cs[theta_max])/sn[theta_max]);
-				index = (bmp->height-i-1)*w_bytes + j*3;
-				if(i>=bmp->height || i<0) continue;
-				bmp->map[index+0]=0;
-				bmp->map[index+1]=0;
-				bmp->map[index+2]=255;
-			}
+		for(j=0;j<bmp->width;j++){
+		i=(int)((rho_max-j*cs[theta_max]/ROUND)/(sn[theta_max]/ROUND));
+		index = (bmp->height-i-1)*w_bytes + j*3;
+		if(i>=bmp->height || i<0) continue;
+		bmp->map[index+0]=0;
+		bmp->map[index+1]=0;
+		bmp->map[index+2]=255;
+		}
 		}
 
 		//yを変化させてxを描く（水平の線を除く）
 		if(theta_max!=THETA_MAX/2){
-			for(i=0;i<bmp->height;i++){
-				j=(int)((rho_max-i*sn[theta_max])/cs[theta_max]);
-				index = (bmp->height-i-1)*w_bytes + j*3;
-				//printf("index:h=%d,w=%d\n",i,j);
-				if(j>=bmp->width || j<0) continue;
-				bmp->map[index+0]=0;
-				bmp->map[index+1]=0;
-				bmp->map[index+2]=255;		
-			}
+		for(i=0;i<bmp->height;i++){
+		j=(int)((rho_max-i*sn[theta_max]/ROUND)/(cs[theta_max]/ROUND));
+		index = (bmp->height-i-1)*w_bytes + j*3;
+		//printf("index:h=%d,w=%d\n",i,j);
+		if(j>=bmp->width || j<0) continue;
+		bmp->map[index+0]=0;
+		bmp->map[index+1]=0;
+		bmp->map[index+2]=255;		
 		}
-		
+		}
+		*/	
 		//近傍の直線を消す
 		for(j=-delete_renge;j<=delete_renge;j++){
 			for(i=-30;i<=30;i++){
@@ -379,6 +381,7 @@ int Hough(Bmp *bmp, struct blackMap b_map){
 	}
 
 	//////////////////
+	//正しい解放か自信がないので後で調べなおす
 	free(b_map.x);
 	free(b_map.y);
 	//////////////////
@@ -393,6 +396,7 @@ int Hough(Bmp *bmp, struct blackMap b_map){
 
 int main(int argc, char *argv[]){
 
+	clock_t start,end;
 	Bmp bmp;
 	int theta;
 	init();
@@ -415,11 +419,29 @@ int main(int argc, char *argv[]){
 
 	b_map = Binarization(&bmp);
 	printf("blackcount:%d\n",b_map.counter);
+
+	start = clock();
 	theta = Hough(&bmp, b_map);
+	end = clock();
+	printf("hough_time:%.2f s\n",(double)(end-start)/CLOCKS_PER_SEC);
+
 	printf("theta:%d\n",theta);
+	start = clock();
 	Rotation(&bmp,theta);
-	SaveBitmapAsPngFile("/vagrant/image/output.png",&bmp);
+	end = clock();
+	printf("rotation_time:%.2f s\n",(double)(end-start)/CLOCKS_PER_SEC);
+
+	//	SaveBitmapAsPngFile("/vagrant/image/output.png",&bmp);
+	start = clock();
+	write_bmp("/vagrant/image/output.bmp",&bmp);
+	end = clock();
+	printf("write_bmp_time:%.2f s\n",(double)(end-start)/CLOCKS_PER_SEC);
+
+	start = clock();
 	delete_bmp(&bmp);
+	end = clock();
+	printf("delete_bmp_time:%.2f s\n",(double)(end-start)/CLOCKS_PER_SEC);
+
 
 	return 0;
 }
