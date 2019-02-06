@@ -10,7 +10,11 @@ class MusicController extends AppController {
 
     public function index() {
         $imageList = $this->getImage();
+<<<<<<< HEAD
        	$this->set(compact('imageList'));
+=======
+	$this->set(compact('imageList'));
+>>>>>>> 770a31e902234a78d6efa76ffc3515d6113bed45
         $this->layout = '';
     }
     
@@ -21,13 +25,18 @@ class MusicController extends AppController {
         $input_fpath = ROOT.DS.APP_DIR.'/tmp/files/image/'.$id.'/0/raw/'.$id.'.bmp';
         $output_fpath_prefix = $outputDir.$id;
         $inPipe = $pipeDir.'/input';
-        if (!file_exists($pipeDir)){
+	if (!file_exists($pipeDir)){
             mkdir($pipeDir, 0777, true);
         }
         if (!file_exists($inPipe)){
             posix_mkfifo($inPipe, '0500');
+<<<<<<< HEAD
             $exe = ROOT.DS.'bin/core_app '. "$inPipe" . ' ' ." > /dev/null &";
 	    $pi = fopen($inPipe, 'w+');
+=======
+	    $exe = ROOT.DS.'bin/core_app '. "$inPipe" . ' ' ." > /dev/null &";
+            $pi = fopen($inPipe, 'w+');
+>>>>>>> 770a31e902234a78d6efa76ffc3515d6113bed45
             fwrite($pi, "load_bmp ".$input_fpath."\n");
             fflush($pi);
             exec($exe);

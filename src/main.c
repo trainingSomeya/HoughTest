@@ -195,13 +195,13 @@ void *signalx(int signo, void* func)
 }
 
 int main(int argc, char *argv[]){
-  App app;
-  uint8_t command_buf[COMMAND_BUF_SIZE];
-  uint8_t *arg[MAX_N_ARG];
+  App app;//パイプと画像とappコマンド
+  uint8_t command_buf[COMMAND_BUF_SIZE];//パイプに入れる中身
+  uint8_t *arg[MAX_N_ARG];//引数へのポインタの配列？
   int32_t n_arg;
   int32_t i;
-  uint8_t logbuf[4096];
-  int32_t timeout_sec = TIMEOUT_SEC;
+  uint8_t logbuf[4096];//logへの出力
+  int32_t timeout_sec = TIMEOUT_SEC;//60s
   
   /* set callback function at alarm signal */
   void* oldSigFunc = signalx(SIGALRM, sigFunc);
@@ -215,7 +215,7 @@ int main(int argc, char *argv[]){
   };
   int32_t n_curr_command = sizeof(command_array_main)/sizeof(command_array_main[0]);
   
-  app_init(&app);
+  app_init(&app);//初期化
   
   if (argc > 1){
     app.P_I = fopen(argv[1], "r+");
