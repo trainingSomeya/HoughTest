@@ -123,6 +123,7 @@ class PagesController extends AppController {
           $rspPipe = fopen($tilePipe, 'w+');
           $cmd = "output_tile ".ROOT.DS.APP_DIR.'/tmp/files/image/'.$id.'/'.$gen.'/'.$tileInfo[0]." ".$tileInfo[1]." ".$tileInfo[2]." ".$tileInfo[3]." ". $tilePipe ."\n";
           
+	  //error_log(print_r($tilePipe,true),"3","/Flute/pipe/debug.log");
           while (1){
             fwrite($pi, $cmd);
             fflush($pi);

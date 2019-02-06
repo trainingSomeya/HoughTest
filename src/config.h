@@ -8,7 +8,7 @@
 #define TIMEOUT_SEC 60
 
 
-#define LOG_DIR "/var/www/Flute/bin/log"
+#define LOG_DIR "/var/www/Piccolo/bin/log"
 
 /* 0-9  6がデフォルト値っぽい */
 #define PNG_COMPRESSION_LEVEL 9

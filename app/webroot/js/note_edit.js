@@ -18,19 +18,23 @@ $(function(){
     $('#pre_load_area').html('');
     draw();
   });
-  
+ //表示のチェック用 
+	function sleep(milliseconds) {
+		return new Promise(resolve => setTimeout(resolve, milliseconds));
+	}
+
   function load_img(url, id){
     //imgPreloaderオブジェクトを作る、名前は任意
     var imgPreloader=new Image();
     //onloadイベントハンドラ追加
-    imgPreloader.onload=function() {
+    imgPreloader.onload= function() {
       //ロード完了で画像を表示
       $('#'+id).attr({'src':url});
     }
     //重要、最後に書く
     imgPreloader.src=url;
   }
-  
+	
   function draw() {
     var ost_x = ((cam_x % tile_w) + tile_w) % tile_w;
     var ost_y = ((cam_y % tile_h) + tile_h) % tile_h;
@@ -105,10 +109,17 @@ $(function(){
       }
     }
     $('#pre_load_area').html(htm);
-    
-    generated_meta_info.forEach(function (o){
-      combine_fpath_id(o.prefix, file_prefix, o.y , o.x);
-    });
+   
+	  //表示のチェック用
+	  (async () => {
+		  for (let i of generated_meta_info){
+			  await sleep(3000);
+			  combine_fpath_id(i.prefix,file_prefix, i.y, i.x);
+		  }
+	  })();
+    /*generated_meta_info.forEach(async function (o){
+     combine_fpath_id(o.prefix, file_prefix, o.y , o.x);
+    });*/
   };
   function gen_img_tag(id_prefix, tile_y, tile_x, preload_id_prefix = '', width = 0, height = 0, pos_y = 0, pos_x = 0){
     if ((tile_x < 0 || tile_y < 0) && width == 0 && height == 0 ){

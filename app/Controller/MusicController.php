@@ -10,7 +10,7 @@ class MusicController extends AppController {
 
     public function index() {
         $imageList = $this->getImage();
-        $this->set(compact('imageList'));
+       	$this->set(compact('imageList'));
         $this->layout = '';
     }
     
@@ -27,7 +27,7 @@ class MusicController extends AppController {
         if (!file_exists($inPipe)){
             posix_mkfifo($inPipe, '0500');
             $exe = ROOT.DS.'bin/core_app '. "$inPipe" . ' ' ." > /dev/null &";
-            $pi = fopen($inPipe, 'w+');
+	    $pi = fopen($inPipe, 'w+');
             fwrite($pi, "load_bmp ".$input_fpath."\n");
             fflush($pi);
             exec($exe);
@@ -38,6 +38,8 @@ class MusicController extends AppController {
             fflush($pi);
             fclose($pi);
         }
+	$exe = ROOT.DS.'bin/core_app '. "$inPipe" . ' ' ." > /dev/null &";
+	error_log(print_r($exe,true),"3",PIPE_ROOT_DIR."debug.log");
         $this->set('imageName', $id);
         $this->layout = '';
     }
